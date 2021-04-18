@@ -1,5 +1,8 @@
 name: deploy to terraform
-# on: [push]
+on:
+  push:
+    branches:
+      - development
 jobs:
   deploy_source:
     name: terraform deployment
