@@ -1,0 +1,46 @@
+name: deploy to terraform
+# on: [push]
+jobs:
+  deploy_source:
+    name: terraform deployment
+    strategy:
+      matrix:
+        folder: [s3-lambda-dynamodb]
+        target: [dev]
+    runs-on: ubuntu-latest
+    # env:
+    #   target: sit
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ matrix.folder }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v1
+
+      - name: setup terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 0.14.6
+
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.SECRET_KEY }}
+          aws-region: us-west-1
+
+      - name: terraform initial
+        run: |
+          terraform init \
+            -backend-config="bucket=lykas-terraform-resource-backend" \
+            -backend-config="key=${{ matrix.folder }}/${{ matrix.target }}.tfstate" \
+            -backend-config="region=us-west-1" \
+            -backend=true
+
+      - name: terraform plan
+        run: terraform  plan -var-file=config.tfvars
+
+      - name: terraform apply
+        run: terraform  apply -var-file=config.tfvars -auto-approve
+
